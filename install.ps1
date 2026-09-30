@@ -102,15 +102,24 @@ if (-not (Test-Path $AppDataBalatro)) {
 }
 Write-Host "[✓] AppData directory: $AppDataBalatro" -ForegroundColor Green
 
-# 3. Check & Install Lovely Injector (version.dll)
+# 3. Check & Install Lovely Injector
 Write-Host ""
-Write-Host "[*] Checking Lovely injector (version.dll)..." -ForegroundColor Yellow
-$versionDll = "$BalatroDir\version.dll"
+Write-Host "[*] Checking Lovely injector..." -ForegroundColor Yellow
 
-if (Test-Path $versionDll) {
+$LovelyInstalled = $false
+if (Test-Path "$BalatroDir\winmm.dll") {
+    $LovelyInstalled = $true
+    Write-Host "[✓] Lovely injector (winmm.dll) is already installed." -ForegroundColor Green
+} elseif (Test-Path "$BalatroDir\version.dll") {
+    $LovelyInstalled = $true
     Write-Host "[✓] Lovely injector (version.dll) is already installed." -ForegroundColor Green
-} else {
-    Write-Host "[*] Downloading Lovely injector..." -ForegroundColor Yellow
+} elseif (Test-Path "$BalatroDir\Mods\lovely" -or (Test-Path "$AppDataBalatro\Mods\lovely")) {
+    $LovelyInstalled = $true
+    Write-Host "[✓] Lovely injector is already installed. Skipping download." -ForegroundColor Green
+}
+
+if (-not $LovelyInstalled) {
+    Write-Host "[*] Downloading Lovely injector (v0.10.0+)..." -ForegroundColor Yellow
     $LovelyZipUrl = "https://github.com/ethangreen-dev/lovely-injector/releases/download/v0.10.0/lovely-x86_64-pc-windows-msvc.zip"
     $TempZip = "$env:TEMP\lovely_injector.zip"
     $TempExtract = "$env:TEMP\lovely_extract"
@@ -119,9 +128,14 @@ if (Test-Path $versionDll) {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         Invoke-WebRequest -Uri $LovelyZipUrl -OutFile $TempZip -UseBasicParsing
         Expand-Archive -Path $TempZip -DestinationPath $TempExtract -Force
-        Copy-Item -Path "$TempExtract\version.dll" -Destination $BalatroDir -Force
+        $dll = Get-ChildItem -Path $TempExtract -Filter "*.dll" -Recurse | Select-Object -First 1
+        if ($dll) {
+            Copy-Item -Path $dll.FullName -Destination "$BalatroDir\$($dll.Name)" -Force
+            Write-Host "[✓] Installed Lovely injector ($($dll.Name)) into $BalatroDir" -ForegroundColor Green
+        } else {
+            Write-Host "[!] No DLL found in downloaded Lovely archive." -ForegroundColor Red
+        }
         Remove-Item -Path $TempZip, $TempExtract -Recurse -Force -ErrorAction SilentlyContinue
-        Write-Host "[✓] Installed Lovely injector (version.dll) into $BalatroDir" -ForegroundColor Green
     } catch {
         Write-Host "[!] Failed to auto-download Lovely: $_" -ForegroundColor Red
         Write-Host "Please download Lovely from https://github.com/ethangreen-dev/lovely-injector/releases manually." -ForegroundColor Yellow

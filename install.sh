@@ -153,13 +153,27 @@ else
     echo -e "${YELLOW}[!] Proton save directory not found yet (game may not have been run once under Proton).${NC}"
 fi
 
-# 4. Check & Install Lovely Injector (version.dll)
+# 4. Check & Install Lovely Injector
 echo ""
 echo -e "${BLUE}[*] Checking Lovely mod injector...${NC}"
-if [ -f "$BALATRO_DIR/version.dll" ]; then
-    echo -e "${GREEN}[✓] Lovely injector (version.dll) is already installed.${NC}"
+LOVELY_INSTALLED=false
+LOVELY_NAME=""
+
+if [ -f "$BALATRO_DIR/winmm.dll" ]; then
+    LOVELY_INSTALLED=true
+    LOVELY_NAME="winmm.dll"
+elif [ -f "$BALATRO_DIR/version.dll" ]; then
+    LOVELY_INSTALLED=true
+    LOVELY_NAME="version.dll"
+elif [ -d "$BALATRO_DIR/Mods/lovely" ] || ([ -n "$PROTON_BALATRO_APPDATA" ] && [ -d "$PROTON_BALATRO_APPDATA/Mods/lovely" ]); then
+    LOVELY_INSTALLED=true
+    LOVELY_NAME="existing installation"
+fi
+
+if [ "$LOVELY_INSTALLED" = true ]; then
+    echo -e "${GREEN}[✓] Lovely injector already installed (${LOVELY_NAME}). Skipping download.${NC}"
 else
-    echo -e "${YELLOW}[*] Downloading Lovely injector (v0.10.0)...${NC}"
+    echo -e "${YELLOW}[*] Downloading Lovely injector (v0.10.0+)...${NC}"
     LOVELY_URL="https://github.com/ethangreen-dev/lovely-injector/releases/download/v0.10.0/lovely-x86_64-pc-windows-msvc.zip"
     TMP_ZIP="/tmp/lovely_injector.zip"
     TMP_EXTRACT="/tmp/lovely_extracted"
@@ -171,15 +185,22 @@ else
     elif command -v wget &>/dev/null; then
         wget -q "$LOVELY_URL" -O "$TMP_ZIP"
     else
-        echo -e "${RED}[ERROR] Neither curl nor wget found. Please download Lovely version.dll manually.${NC}"
+        echo -e "${RED}[ERROR] Neither curl nor wget found. Please download Lovely manually.${NC}"
         exit 1
     fi
 
     if command -v unzip &>/dev/null; then
         unzip -q "$TMP_ZIP" -d "$TMP_EXTRACT"
-        cp "$TMP_EXTRACT/version.dll" "$BALATRO_DIR/version.dll"
+        DLL_FILE=$(find "$TMP_EXTRACT" -type f -name "*.dll" | head -n 1 || true)
+        if [ -n "$DLL_FILE" ]; then
+            DLL_BASENAME=$(basename "$DLL_FILE")
+            cp "$DLL_FILE" "$BALATRO_DIR/$DLL_BASENAME"
+            LOVELY_NAME="$DLL_BASENAME"
+            echo -e "${GREEN}[✓] Installed Lovely injector (${DLL_BASENAME}) into Balatro game directory.${NC}"
+        else
+            echo -e "${RED}[ERROR] No DLL found in Lovely archive.${NC}"
+        fi
         rm -rf "$TMP_ZIP" "$TMP_EXTRACT"
-        echo -e "${GREEN}[✓] Installed Lovely injector (version.dll) into Balatro game directory.${NC}"
     else
         echo -e "${YELLOW}[!] 'unzip' command not found. Please extract $TMP_ZIP into $BALATRO_DIR manually.${NC}"
     fi
@@ -262,7 +283,12 @@ echo ""
 echo -e "${BOLD}Important reminder for Proton on Linux / Steam Deck:${NC}"
 echo -e "In Steam, right-click ${CYAN}Balatro${NC} -> ${CYAN}Properties...${NC}"
 echo -e "In ${CYAN}Launch Options${NC}, ensure you have:"
-echo -e "    ${YELLOW}WINEDLLOVERRIDES=\"version=n,b\" %command%${NC}"
+if [ "$LOVELY_NAME" = "version.dll" ]; then
+    echo -e "    ${YELLOW}WINEDLLOVERRIDES=\"version=n,b\" %command%${NC}"
+else
+    echo -e "    ${YELLOW}WINEDLLOVERRIDES=\"winmm=n,b\" %command%${NC}"
+    echo -e "    (or ${YELLOW}WINEDLLOVERRIDES=\"version=n,b\" %command%${NC} if using an older version)"
+fi
 echo ""
 echo -e "To configure in game: ${BOLD}Options -> Settings -> Cloud Sync${NC} tab."
 echo -e "Enjoy automatic cross-platform cloud saves!"
