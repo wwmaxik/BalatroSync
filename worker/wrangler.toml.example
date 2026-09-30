@@ -1,6 +1,12 @@
 name = "balatro-sync"
 main = "src/index.js"
 compatibility_date = "2024-09-01"
+workers_dev = true
+
+# Custom Domain (Optional: route your own domain/subdomain to this Worker)
+# routes = [
+#   { pattern = "balatro.yourdomain.com", custom_domain = true }
+# ]
 
 [vars]
 AUTH_TOKEN = "your_secret_auth_token_here"
