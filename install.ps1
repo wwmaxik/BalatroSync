@@ -1,18 +1,48 @@
 # ==============================================================================
 # BalatroSync Installer for Windows
 # Automatically installs Lovely Injector, BalatroSync Mod, and TLS helpers.
+# Supports 1-line installation via PowerShell:
+#   irm https://raw.githubusercontent.com/wwmaxik/BalatroSync/main/install.ps1 | iex
 # ==============================================================================
 
 [CmdletBinding()]
 param()
 
-$Host.UI.RawUI.WindowTitle = "BalatroSync Cloud Mod Installer"
+try {
+    $Host.UI.RawUI.WindowTitle = "BalatroSync Cloud Mod Installer"
+} catch {}
+
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "           BalatroSync Cloud Mod Installer (Windows)        " -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ""
 
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+# 0. Resolve Payload Directory (Local vs. 1-liner irm | iex)
+$ScriptDir = $PSScriptRoot
+if (-not $ScriptDir -and $MyInvocation.MyCommand.Path) {
+    $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+}
+
+$PayloadDir = $ScriptDir
+
+if (-not $ScriptDir -or -not (Test-Path "$ScriptDir\Mod")) {
+    Write-Host "[*] Remote one-liner detected. Downloading BalatroSync package from GitHub..." -ForegroundColor Yellow
+    $TempZip = "$env:TEMP\balatrosync_pkg.zip"
+    $TempExtract = "$env:TEMP\balatrosync_extract"
+    Remove-Item -Path $TempZip, $TempExtract -Recurse -Force -ErrorAction SilentlyContinue
+
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    Invoke-WebRequest -Uri "https://github.com/wwmaxik/BalatroSync/archive/refs/heads/main.zip" -OutFile $TempZip -UseBasicParsing
+    Expand-Archive -Path $TempZip -DestinationPath $TempExtract -Force
+
+    $PayloadDir = "$TempExtract\BalatroSync-main"
+    if (-not (Test-Path "$PayloadDir\Mod")) {
+        $found = Get-ChildItem -Path $TempExtract -Filter "Mod" -Recurse -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($found) {
+            $PayloadDir = $found.Parent.FullName
+        }
+    }
+}
 
 # 1. Locate Balatro Directory
 $BalatroDir = ""
@@ -59,7 +89,6 @@ if (-not $BalatroDir) {
         $BalatroDir = $userPath
     } else {
         Write-Host "[ERROR] Balatro.exe not found at '$userPath'. Aborting." -ForegroundColor Red
-        Pause
         Exit 1
     }
 }
@@ -102,13 +131,13 @@ if (Test-Path $versionDll) {
 # 4. Copy TLS Network helpers (curl.exe)
 Write-Host ""
 Write-Host "[*] Installing network helpers..." -ForegroundColor Yellow
-if (Test-Path "$ScriptDir\bin\curl.exe") {
-    Copy-Item -Path "$ScriptDir\bin\curl.exe" -Destination $BalatroDir -Force
-    if (Test-Path "$ScriptDir\bin\libcurl-x64.dll") {
-        Copy-Item -Path "$ScriptDir\bin\libcurl-x64.dll" -Destination $BalatroDir -Force
+if (Test-Path "$PayloadDir\bin\curl.exe") {
+    Copy-Item -Path "$PayloadDir\bin\curl.exe" -Destination $BalatroDir -Force
+    if (Test-Path "$PayloadDir\bin\libcurl-x64.dll") {
+        Copy-Item -Path "$PayloadDir\bin\libcurl-x64.dll" -Destination $BalatroDir -Force
     }
-    if (Test-Path "$ScriptDir\bin\curl-ca-bundle.crt") {
-        Copy-Item -Path "$ScriptDir\bin\curl-ca-bundle.crt" -Destination $BalatroDir -Force
+    if (Test-Path "$PayloadDir\bin\curl-ca-bundle.crt") {
+        Copy-Item -Path "$PayloadDir\bin\curl-ca-bundle.crt" -Destination $BalatroDir -Force
     }
     Write-Host "[✓] Network helpers installed." -ForegroundColor Green
 }
@@ -123,13 +152,13 @@ $AppModsDir = "$AppDataBalatro\Mods\BalatroSync"
 New-Item -ItemType Directory -Path $GameModsDir -Force | Out-Null
 New-Item -ItemType Directory -Path $AppModsDir -Force | Out-Null
 
-Copy-Item -Path "$ScriptDir\Mod\lovely.toml" -Destination $GameModsDir -Force
-Copy-Item -Path "$ScriptDir\Mod\sync_mod.lua" -Destination $GameModsDir -Force
-Copy-Item -Path "$ScriptDir\Mod\sync_thread.lua" -Destination $GameModsDir -Force
+Copy-Item -Path "$PayloadDir\Mod\lovely.toml" -Destination $GameModsDir -Force
+Copy-Item -Path "$PayloadDir\Mod\sync_mod.lua" -Destination $GameModsDir -Force
+Copy-Item -Path "$PayloadDir\Mod\sync_thread.lua" -Destination $GameModsDir -Force
 
-Copy-Item -Path "$ScriptDir\Mod\lovely.toml" -Destination $AppModsDir -Force
-Copy-Item -Path "$ScriptDir\Mod\sync_mod.lua" -Destination $AppModsDir -Force
-Copy-Item -Path "$ScriptDir\Mod\sync_thread.lua" -Destination $AppModsDir -Force
+Copy-Item -Path "$PayloadDir\Mod\lovely.toml" -Destination $AppModsDir -Force
+Copy-Item -Path "$PayloadDir\Mod\sync_mod.lua" -Destination $AppModsDir -Force
+Copy-Item -Path "$PayloadDir\Mod\sync_thread.lua" -Destination $AppModsDir -Force
 
 Write-Host "[✓] BalatroSync mod files installed." -ForegroundColor Green
 
@@ -171,6 +200,11 @@ if (-not (Test-Path $ConfigPath1) -or ($workerUrl -ne "https://balatro-sync.your
     Write-Host "[✓] Preserved existing config.json" -ForegroundColor Green
 }
 
+# Clean up temporary downloaded payload if 1-liner mode was used
+if ($PayloadDir -like "$env:TEMP\*") {
+    Remove-Item -Path (Split-Path -Parent $PayloadDir) -Recurse -Force -ErrorAction SilentlyContinue
+}
+
 # 7. Complete
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Green
@@ -182,5 +216,3 @@ Write-Host "1. Launch Balatro."
 Write-Host "2. Go to: Options -> Settings -> Cloud Sync tab."
 Write-Host "3. You can click [ Paste All ] if you have a code copied, or test the connection."
 Write-Host ""
-Write-Host "Press any key to exit..."
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")

@@ -2,6 +2,8 @@
 # ==============================================================================
 # BalatroSync Installer for Linux / Steam Deck / Proton
 # Automatically sets up Lovely Injector, BalatroSync Mod, and TLS helpers.
+# Supports 1-line installation via:
+#   curl -sSL https://raw.githubusercontent.com/wwmaxik/BalatroSync/main/install.sh | bash
 # ==============================================================================
 
 set -e
@@ -14,13 +16,52 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 echo -e "${CYAN}${BOLD}"
 echo "============================================================"
 echo "           BalatroSync Cloud Mod Installer (Linux)         "
 echo "============================================================"
 echo -e "${NC}"
+
+# Helper for interactive prompt when piped from curl into bash
+prompt_read() {
+    local prompt_msg="$1"
+    local var_name="$2"
+    if [ -e /dev/tty ]; then
+        read -rp "$prompt_msg" "$var_name" < /dev/tty || true
+    else
+        read -rp "$prompt_msg" "$var_name" || true
+    fi
+}
+
+# 0. Resolve payload directory (Local directory vs. curl | bash pipe)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "")"
+PAYLOAD_DIR=""
+
+if [ -n "$SCRIPT_DIR" ] && [ -d "$SCRIPT_DIR/Mod" ]; then
+    PAYLOAD_DIR="$SCRIPT_DIR"
+else
+    echo -e "${BLUE}[*] Remote one-liner detected. Downloading BalatroSync package...${NC}"
+    TMP_WORK_DIR=$(mktemp -d /tmp/balatrosync_install.XXXXXX)
+    TAR_URL="https://github.com/wwmaxik/BalatroSync/archive/refs/heads/main.tar.gz"
+
+    if command -v curl &>/dev/null; then
+        curl -sSL "$TAR_URL" | tar -xz -C "$TMP_WORK_DIR"
+    elif command -v wget &>/dev/null; then
+        wget -qO- "$TAR_URL" | tar -xz -C "$TMP_WORK_DIR"
+    else
+        echo -e "${RED}[ERROR] Neither curl nor wget found. Please install curl or wget.${NC}"
+        exit 1
+    fi
+
+    FOUND_MOD_DIR=$(find "$TMP_WORK_DIR" -maxdepth 3 -type d -name "Mod" 2>/dev/null | head -n 1 || true)
+    if [ -n "$FOUND_MOD_DIR" ]; then
+        PAYLOAD_DIR="$(dirname "$FOUND_MOD_DIR")"
+    else
+        echo -e "${RED}[ERROR] Failed to extract BalatroSync payload.${NC}"
+        exit 1
+    fi
+    trap 'rm -rf "$TMP_WORK_DIR"' EXIT
+fi
 
 # 1. Search for Steam directories
 STEAM_DIRS=(
@@ -69,7 +110,7 @@ done
 
 if [ -z "$BALATRO_DIR" ]; then
     echo -e "${YELLOW}[!] Balatro installation not automatically found.${NC}"
-    read -rp "Please enter the path to your Balatro directory: " user_path
+    prompt_read "Please enter the path to your Balatro directory: " user_path
     user_path="${user_path/#\~/$HOME}"
     if [ -f "$user_path/Balatro.exe" ]; then
         BALATRO_DIR="$user_path"
@@ -147,10 +188,10 @@ fi
 # 5. Copy Windows curl helper for Proton TLS stability
 echo ""
 echo -e "${BLUE}[*] Installing TLS network helper (curl.exe)...${NC}"
-if [ -f "$SCRIPT_DIR/bin/curl.exe" ]; then
-    cp -v "$SCRIPT_DIR/bin/curl.exe" "$BALATRO_DIR/"
-    [ -f "$SCRIPT_DIR/bin/libcurl-x64.dll" ] && cp -v "$SCRIPT_DIR/bin/libcurl-x64.dll" "$BALATRO_DIR/"
-    [ -f "$SCRIPT_DIR/bin/curl-ca-bundle.crt" ] && cp -v "$SCRIPT_DIR/bin/curl-ca-bundle.crt" "$BALATRO_DIR/"
+if [ -f "$PAYLOAD_DIR/bin/curl.exe" ]; then
+    cp -v "$PAYLOAD_DIR/bin/curl.exe" "$BALATRO_DIR/"
+    [ -f "$PAYLOAD_DIR/bin/libcurl-x64.dll" ] && cp -v "$PAYLOAD_DIR/bin/libcurl-x64.dll" "$BALATRO_DIR/"
+    [ -f "$PAYLOAD_DIR/bin/curl-ca-bundle.crt" ] && cp -v "$PAYLOAD_DIR/bin/curl-ca-bundle.crt" "$BALATRO_DIR/"
     echo -e "${GREEN}[✓] TLS network helpers installed.${NC}"
 fi
 
@@ -160,16 +201,16 @@ echo -e "${BLUE}[*] Installing BalatroSync mod files...${NC}"
 GAME_MODS_DIR="$BALATRO_DIR/Mods/BalatroSync"
 mkdir -p "$GAME_MODS_DIR"
 
-cp -v "$SCRIPT_DIR/Mod/lovely.toml" "$GAME_MODS_DIR/"
-cp -v "$SCRIPT_DIR/Mod/sync_mod.lua" "$GAME_MODS_DIR/"
-cp -v "$SCRIPT_DIR/Mod/sync_thread.lua" "$GAME_MODS_DIR/"
+cp -v "$PAYLOAD_DIR/Mod/lovely.toml" "$GAME_MODS_DIR/"
+cp -v "$PAYLOAD_DIR/Mod/sync_mod.lua" "$GAME_MODS_DIR/"
+cp -v "$PAYLOAD_DIR/Mod/sync_thread.lua" "$GAME_MODS_DIR/"
 
 if [ -n "$PROTON_BALATRO_APPDATA" ]; then
     PROTON_MODS_DIR="$PROTON_BALATRO_APPDATA/Mods/BalatroSync"
     mkdir -p "$PROTON_MODS_DIR"
-    cp -v "$SCRIPT_DIR/Mod/lovely.toml" "$PROTON_MODS_DIR/"
-    cp -v "$SCRIPT_DIR/Mod/sync_mod.lua" "$PROTON_MODS_DIR/"
-    cp -v "$SCRIPT_DIR/Mod/sync_thread.lua" "$PROTON_MODS_DIR/"
+    cp -v "$PAYLOAD_DIR/Mod/lovely.toml" "$PROTON_MODS_DIR/"
+    cp -v "$PAYLOAD_DIR/Mod/sync_mod.lua" "$PROTON_MODS_DIR/"
+    cp -v "$PAYLOAD_DIR/Mod/sync_thread.lua" "$PROTON_MODS_DIR/"
 fi
 
 # 7. Setup Configuration (Optional Setup Code)
@@ -178,7 +219,8 @@ echo -e "${CYAN}------------------------------------------------------------${NC
 echo -e "You can configure your Cloudflare Worker URL & Token right now,"
 echo -e "or skip and paste it directly in the in-game GUI via ${BOLD}[ Paste All ]${NC}."
 echo -e "${CYAN}------------------------------------------------------------${NC}"
-read -rp "Paste Setup Code (URL#TOKEN) or press [ENTER] to skip: " setup_input
+setup_input=""
+prompt_read "Paste Setup Code (URL#TOKEN) or press [ENTER] to skip: " setup_input
 
 TARGET_CONFIG="$GAME_MODS_DIR/config.json"
 WORKER_URL=""

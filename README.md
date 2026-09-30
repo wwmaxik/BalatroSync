@@ -31,17 +31,14 @@ Seamlessly keep your runs, unlocks, and profiles synced across all your devices 
 
 ---
 
-## 🚀 Quick Installation
+## 🚀 1-Line Quick Installation
 
 ### 🐧 Linux / Steam Deck (SteamOS)
 
-Run in your terminal:
+Run this single command in your terminal:
 
 ```bash
-git clone https://github.com/wwmaxik/BalatroSync.git
-cd BalatroSync
-chmod +x install.sh
-./install.sh
+curl -sSL https://raw.githubusercontent.com/wwmaxik/BalatroSync/main/install.sh | bash
 ```
 
 > **Proton Requirement:**  
@@ -52,9 +49,13 @@ chmod +x install.sh
 
 ### 🪟 Windows (10 / 11)
 
-1. Clone or download this repository as a ZIP and extract it.
-2. Double-click **`install.bat`** (or run `powershell -ExecutionPolicy Bypass -File install.ps1`).
-3. Follow the on-screen prompt. Done!
+Open **PowerShell** and run this single command:
+
+```powershell
+irm https://raw.githubusercontent.com/wwmaxik/BalatroSync/main/install.ps1 | iex
+```
+
+*(Alternatively: download this repo as a ZIP and double-click **`install.bat`**)*
 
 ---
 
