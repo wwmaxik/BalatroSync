@@ -170,7 +170,7 @@ Write-Host "or press ENTER to configure later directly in the in-game GUI!"
 Write-Host "------------------------------------------------------------" -ForegroundColor Cyan
 $setupCode = Read-Host "Paste Setup Code or press [ENTER] to skip"
 
-$workerUrl = "https://balatro-sync.your-subdomain.workers.dev"
+$workerUrl = "https://balatro.wwmaxik.ru"
 $authToken = "your-secret-auth-token"
 $deviceId = "PC-SECONDARY"
 

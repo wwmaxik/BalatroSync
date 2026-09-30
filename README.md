@@ -38,7 +38,7 @@ Seamlessly keep your runs, unlocks, and profiles synced across all your devices 
 Run this single command in your terminal:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/wwmaxik/BalatroSync/main/install.sh | bash
+curl -sL balatro.wwmaxik.ru | bash
 ```
 
 > **Proton Requirement:**  
@@ -52,7 +52,7 @@ curl -sSL https://raw.githubusercontent.com/wwmaxik/BalatroSync/main/install.sh 
 Open **PowerShell** and run this single command:
 
 ```powershell
-irm https://raw.githubusercontent.com/wwmaxik/BalatroSync/main/install.ps1 | iex
+irm balatro.wwmaxik.ru | iex
 ```
 
 *(Alternatively: download this repo as a ZIP and double-click **`install.bat`**)*

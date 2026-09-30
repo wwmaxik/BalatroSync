@@ -240,7 +240,7 @@ if [ -f "$TARGET_CONFIG" ] && [ -z "$WORKER_URL" ]; then
 else
     cat <<EOF > "$TARGET_CONFIG"
 {
-  "worker_url": "${WORKER_URL:-https://balatro-sync.your-subdomain.workers.dev}",
+  "worker_url": "${WORKER_URL:-https://balatro.wwmaxik.ru}",
   "auth_token": "${AUTH_TOKEN:-your-secret-auth-token}",
   "device_id": "${DEVICE_ID}",
   "auto_sync": true
