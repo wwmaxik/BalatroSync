@@ -1,0 +1,6 @@
+{
+  "worker_url": "https://balatro-sync.your-subdomain.workers.dev",
+  "auth_token": "your-secret-auth-token",
+  "device_id": "PC-PRIMARY",
+  "auto_sync": true
+}

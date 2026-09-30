@@ -1,0 +1,12 @@
+# BalatroSync gitignore
+.DS_Store
+*.tmp
+*.log
+_curl_req.tmp
+balatro_sync.log
+
+# Local personal configs (contain private secrets)
+Mod/config.json
+worker/wrangler.toml
+worker/.wrangler/
+worker/node_modules/

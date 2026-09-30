@@ -1,0 +1,146 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.pattern]
+target = "main.lua"
+pattern = "function love.load()"
+position = "before"
+payload = '''
+-- Load BalatroSync Mod
+pcall(function()
+    local save_path = love.filesystem.getSaveDirectory() .. "/Mods/BalatroSync/sync_mod.lua"
+    local f = loadfile(save_path) or loadfile("Mods/BalatroSync/sync_mod.lua")
+    if not f and love.filesystem.getInfo("Mods/BalatroSync/sync_mod.lua") then
+        f = love.filesystem.load("Mods/BalatroSync/sync_mod.lua")
+    end
+    if f then
+        f()
+        print("[BalatroSync] Mod script loaded successfully.")
+    else
+        print("[BalatroSync] Warning: Could not locate sync_mod.lua")
+    end
+end)
+'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = "main.lua"
+pattern = "G:start_up()"
+position = "after"
+payload = '''
+    if BalatroSync and BalatroSync.init then
+        BalatroSync.init()
+    end
+'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = "main.lua"
+pattern = "function love.quit()"
+position = "after"
+payload = '''
+    if BalatroSync and BalatroSync.on_quit then
+        BalatroSync.on_quit()
+    end
+'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = "main.lua"
+pattern = "G:draw()"
+position = "after"
+payload = '''
+    if BalatroSync and BalatroSync.draw then
+        BalatroSync.draw()
+    end
+'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = "game.lua"
+pattern = "function Game:update(dt)"
+position = "after"
+payload = '''
+    if BalatroSync and BalatroSync.update then
+        BalatroSync.update(dt)
+    end
+'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = "game.lua"
+pattern = "ease_background_colour_blind(G.STATES.ROUND_EVAL)"
+position = "after"
+payload = '''
+                if BalatroSync and BalatroSync.on_round_eval then
+                    BalatroSync.on_round_eval()
+                end
+'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = "game.lua"
+pattern = "ease_background_colour_blind(G.STATES.BLIND_SELECT)"
+position = "after"
+payload = '''
+        if BalatroSync and BalatroSync.on_shop_exit then
+            BalatroSync.on_shop_exit()
+        end
+'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = "functions/button_callbacks.lua"
+pattern = "G.FUNCS.go_to_menu = function(e)"
+position = "after"
+payload = '''
+  if BalatroSync and BalatroSync.on_menu then
+    BalatroSync.on_menu()
+  end
+'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+pattern = "function save_run()"
+position = "after"
+payload = '''
+  if BalatroSync and BalatroSync.on_save_run then
+    BalatroSync.on_save_run()
+  end
+'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+pattern = "function remove_save()"
+position = "after"
+payload = '''
+  if BalatroSync and BalatroSync.on_remove_save then
+    BalatroSync.on_remove_save()
+  end
+'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = "functions/UI_definitions.lua"
+pattern = "local t = create_UIBox_generic_options({back_func = 'options',contents = {create_tabs("
+position = "before"
+payload = '''
+  if BalatroSync and BalatroSync.get_settings_tab then
+    tabs[#tabs+1] = BalatroSync.get_settings_tab()
+  end
+'''
+match_indent = true
